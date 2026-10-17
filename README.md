@@ -23,8 +23,8 @@ only. [Testing](docs/testing.md) lists what has and hasn't been checked.
 
 ## Install
 
-**Install the app first, then add the bar widget.** Omarchy installs the
-widget from git, but it builds nothing, and the widget needs the app.
+**Install the app first, then add the bar widget.** The widget needs the
+app. Omarchy installs the widget from git and builds nothing.
 
 ### 1. Install the app
 
@@ -101,8 +101,8 @@ If the bar still shows the old widget after an update, run
 
 ## Uninstall
 
-1. **Turn off start at login first**, in the footer of omalive's window.
-   Otherwise the autostart entry stays behind.
+1. **Turn off start at login first.** The switch is in the footer of
+   omalive's window. Otherwise the autostart entry stays behind.
 2. Remove the bar widget:
 
    ```sh
@@ -137,7 +137,8 @@ chain.
 
 **Test your sound** with **Test 10 s**, or `t`. omalive records the raw
 microphone and Omalive Mic side by side. It measures peak, loudness and
-background noise, says what to change, and plays both takes back.
+background noise, and says what to change. **Play processed** and **Play
+original** play the takes back.
 [Recommended setup](docs/setup-guide.md) has starting points for a dynamic
 microphone and for a camera through a capture card.
 
@@ -149,9 +150,9 @@ microphone and for a camera through a capture card.
 
 ![The Camera page: original and graded preview, scopes and looks](docs/screenshots/omalive-camera.webp)
 
-**With Only when in use on, the camera sleeps.** This is the default. The
-camera and its light stay off until an app opens Omalive Camera or you
-show the preview.
+**Only when in use is on by default, so the camera sleeps.** The camera
+and its light stay off until an app opens Omalive Camera or you show the
+preview.
 
 A look has two layers:
 
@@ -177,7 +178,8 @@ processed. `Ctrl+Q` in the window, or **Quit** in the bar, stops omalive
 and releases every device.
 
 - `omalive --background` starts it without a window.
-- **start at login**, in the window's footer, does that at every login.
+- Turn on **start at login**, in the window's footer, to start it in the
+  background at every login.
 - Voice and camera that were on when omalive stopped start again with it.
 
 The bar widget is one small pill:

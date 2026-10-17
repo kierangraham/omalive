@@ -37,29 +37,39 @@ source=("$pkgname-$pkgver.tar.gz::https://github.com/kierangraham/omalive/archiv
 # Update after the v0.1.0 tag is published: run updpkgsums.
 sha256sums=('SKIP')
 
+_cargo_env() {
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  # Keep the build folder's path out of the binary. Add the flag once, so
+  # package() reuses build()'s output instead of rebuilding.
+  local remap="--remap-path-prefix=$srcdir=/"
+  case " ${RUSTFLAGS:-} " in
+    *" $remap "*) ;;
+    *) export RUSTFLAGS="${RUSTFLAGS:-} $remap" ;;
+  esac
+}
+
 prepare() {
   cd "$pkgname-$pkgver"
-  export RUSTUP_TOOLCHAIN=stable
+  _cargo_env
   cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
 }
 
 build() {
   cd "$pkgname-$pkgver"
-  export RUSTUP_TOOLCHAIN=stable
-  export CARGO_TARGET_DIR=target
+  _cargo_env
   cargo build --frozen --release -p omalive-app
 }
 
 check() {
   cd "$pkgname-$pkgver"
-  export RUSTUP_TOOLCHAIN=stable
-  export CARGO_TARGET_DIR=target
+  _cargo_env
   cargo test --frozen --workspace
 }
 
 package() {
   cd "$pkgname-$pkgver"
-  export RUSTUP_TOOLCHAIN=stable
+  _cargo_env
   make install DESTDIR="$pkgdir" PREFIX=/usr
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
