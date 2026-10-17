@@ -34,8 +34,7 @@ optdepends=(
   'v4l2loopback-dkms: a V4L2 camera for apps that do not use PipeWire'
 )
 source=("$pkgname-$pkgver.tar.gz::https://github.com/kierangraham/omalive/archive/refs/tags/v$pkgver.tar.gz")
-# Update after the v0.1.0 tag is published: run updpkgsums.
-sha256sums=('SKIP')
+sha256sums=('d5174fe28ae150ff2a8e2c4d4440db59ca3386451b848708c16f3fce829dd70f')
 
 _cargo_env() {
   export RUSTUP_TOOLCHAIN=stable
