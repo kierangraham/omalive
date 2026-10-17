@@ -95,14 +95,16 @@ Item {
     id: locator
     command: ["sh", "-c", root.locate]
     running: true
-    stdout: SplitParser { onRead: function(data) { root.binary = String(data).trim() } }
-    onExited: function(code, status) {
-      if (root.binary) {
-        bridge.running = true
-      } else {
-        root.error = "omalive is not installed. Install it as described in the omalive README."
-        retry.restart()
+    stdout: SplitParser {
+      onRead: function(data) {
+        root.binary = String(data).trim()
+        if (root.binary && !bridge.running) bridge.running = true
       }
+    }
+    onExited: function(code, status) {
+      if (root.binary) return
+      root.error = "omalive is not installed. Install it as described in the omalive README."
+      retry.restart()
     }
   }
   Process {
