@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=omalive
+GenericName=Voice and Camera Processor
+Comment=Clean up your microphone and grade your camera for calls
+Exec=omalive
+Icon=omalive
+Terminal=false
+Categories=AudioVideo;Audio;Video;
+StartupWMClass=omalive
+Keywords=microphone;camera;webcam;noise;eq;lut;color;pipewire;omarchy;
+Actions=Demo;
+
+[Desktop Action Demo]
+Name=Try Without Devices
+Exec=omalive --demo

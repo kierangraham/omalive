@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Loads the bar widget in a separate Quickshell against `omalive --demo` on
+# a private socket and drives every state. By default it runs on Wayland with
+# every window hidden. With --render it runs offscreen instead, substituting
+# the layer-shell panel with tests/shim, and saves PNG renders of each state
+# to shell/tests/output/.
+set -euo pipefail
+shell_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+root=$(cd -- "$shell_dir/.." && pwd)
+omarchy_path=${OMARCHY_PATH:-/usr/share/omarchy}
+binary=${OMALIVE_BIN:-$root/target/debug/omalive}
+smoke_dir=$(mktemp -d /tmp/omalive-qml.XXXXXX)
+socket=$smoke_dir/omalive.sock
+OMALIVE_SOCKET=$socket "$binary" --demo --background >"$smoke_dir/demo.log" 2>&1 &
+demo=$!
+trap 'kill $demo 2>/dev/null || true; rm -rf -- "$smoke_dir"' EXIT
+ln -s -- "$omarchy_path/shell/Commons" "$smoke_dir/Commons"
+ln -s -- "$shell_dir" "$smoke_dir/plugin"
+cp -- "$shell_dir/tests/smoke.qml" "$smoke_dir/shell.qml"
+env=(OMALIVE_BIN="$binary" OMALIVE_SOCKET="$socket")
+if [[ ${1:-} == --render ]]; then
+  mkdir -p "$smoke_dir/Ui" "$shell_dir/tests/output"
+  for file in "$omarchy_path"/shell/Ui/*; do ln -s -- "$file" "$smoke_dir/Ui/"; done
+  ln -sf -- "$shell_dir/tests/shim/KeyboardPanel.qml" "$smoke_dir/Ui/KeyboardPanel.qml"
+  env+=(OMALIVE_SMOKE_OUTPUT="$shell_dir/tests/output" QT_SCALE_FACTOR="${SCALE:-2}"
+        QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME=generic QT_QUICK_BACKEND=software)
+else
+  ln -s -- "$omarchy_path/shell/Ui" "$smoke_dir/Ui"
+  env+=(QT_QPA_PLATFORM=wayland)
+fi
+env "${env[@]}" timeout 70s quickshell -p "$smoke_dir" > "$smoke_dir/output.log" 2>&1 || {
+  cat "$smoke_dir/output.log"
+  exit 1
+}
+if grep -E 'FAIL:|TypeError|ReferenceError|Error loading configuration|Cannot assign|Unable to assign|is not defined|unavailable' "$smoke_dir/output.log"; then
+  cat "$smoke_dir/output.log"
+  exit 1
+fi
+grep 'PASS:' "$smoke_dir/output.log" || {
+  cat "$smoke_dir/output.log"
+  exit 1
+}

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Copy the bar widget from this checkout into the Omarchy shell, laid out as
+# `omarchy plugin add` would clone it. For development: run by
+# `make plugin`; safe to repeat. A normal install uses
+# `omarchy plugin add https://github.com/kierangraham/omalive --enable`.
+set -euo pipefail
+
+shell_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+root=$(cd -- "$shell_dir/.." && pwd)
+plugin_id=kierangraham.omalive
+plugin_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/$plugin_id"
+shell_config="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/shell.json"
+
+if ! command -v omarchy-shell >/dev/null; then
+  echo "Omarchy shell not found; skipping the bar widget." >&2
+  exit 0
+fi
+staging=$(mktemp -d)
+trap 'rm -rf -- "$staging"' EXIT
+files=(Service.qml BarWidget.qml Capsule.qml DotWave.qml Model.js)
+# Files earlier versions installed at the plugin's top level.
+retired=(Service.qml BarWidget.qml Capsule.qml DotWave.qml Model.js DotPicture.qml BarLevels.qml BarPicture.qml)
+install -m644 "$root/manifest.json" "$staging/manifest.json"
+for file in "${files[@]}"; do install -Dm644 "$shell_dir/$file" "$staging/shell/$file"; done
+omarchy plugin validate "$staging"
+
+if [[ -d $plugin_dir/.git ]]; then
+  echo "$plugin_dir is a git checkout; update it with: omarchy plugin update $plugin_id" >&2
+  exit 1
+fi
+if [[ -e $plugin_dir && ! -f $plugin_dir/.omalive-managed ]]; then
+  echo "Existing plugin directory was not installed by omalive: $plugin_dir" >&2
+  exit 1
+fi
+first_install=0
+[[ -e $plugin_dir ]] || first_install=1
+mkdir -p "$plugin_dir/shell"
+for file in "${files[@]}"; do install -m644 "$staging/shell/$file" "$plugin_dir/shell/$file"; done
+install -m644 "$staging/manifest.json" "$plugin_dir/manifest.json"
+for file in "${retired[@]}"; do rm -f -- "$plugin_dir/$file"; done
+touch "$plugin_dir/.omalive-managed"
+
+omarchy-shell shell rescanPlugins
+# The rescan completes asynchronously; wait until the shell knows the plugin.
+for _ in $(seq 50); do
+  omarchy-shell shell listPlugins | grep -q "\"$plugin_id\"" && break
+  sleep 0.1
+done
+if (( first_install )); then
+  if [[ -f $shell_config ]]; then
+    cp -a -- "$shell_config" "$shell_config.bak.omalive.$(date +%Y%m%d-%H%M%S)"
+  fi
+  omarchy plugin enable "$plugin_id"
+fi
+echo "Installed the omalive bar widget."

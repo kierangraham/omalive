@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "kierangraham.omalive",
+  "name": "omalive",
+  "version": "0.1.0",
+  "author": "Kieran Graham",
+  "license": "MIT",
+  "description": "Your processed mic and graded camera in the bar, with quick controls",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "service": "shell/Service.qml",
+    "barWidget": "shell/BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "omalive",
+    "description": "Mic waveform and camera halftone while you are on air, with mute, looks and camera controls",
+    "category": "Audio",
+    "aliases": [
+      "microphone",
+      "camera",
+      "webcam",
+      "on air"
+    ],
+    "defaultSection": "right",
+    "allowMultiple": false,
+    "defaults": {
+      "showMic": true,
+      "showCamera": true
+    },
+    "schema": [
+      {
+        "key": "showMic",
+        "type": "boolean",
+        "label": "Mic waveform in bar",
+        "defaultValue": true
+      },
+      {
+        "key": "showCamera",
+        "type": "boolean",
+        "label": "Camera halftone in bar",
+        "defaultValue": true
+      }
+    ]
+  }
+}

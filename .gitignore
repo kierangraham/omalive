@@ -1,0 +1,8 @@
+target/
+__pycache__/
+*.pyc
+# Promo footage and renders; linked from the README, never committed.
+artifacts/
+shell/tests/output/
+# Third-party LUTs and presets kept locally; not licensed for redistribution.
+look-library/

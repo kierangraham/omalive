@@ -1,0 +1,39 @@
+[workspace]
+resolver = "3"
+members = ["crates/omalive-core", "crates/omalive-media", "crates/omalive-app"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+license = "MIT"
+
+[workspace.dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+omalive-core = { path = "crates/omalive-core" }
+omalive-media = { path = "crates/omalive-media" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[profile.dev]
+# Keep GPUI development artifacts small; opt into symbols when debugging.
+debug = 0
+incremental = false
+
+# The camera grader and meter run per frame; keep them fast in debug builds too.
+[profile.dev.package.omalive-media]
+opt-level = 2
+[profile.dev.package.omalive-core]
+opt-level = 2
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+overflow-checks = true
+
+# Match Disktree's workaround for GPUI Kit's release proc-macro helper.
+[profile.release.package.gpui-pre-macros]
+debug-assertions = true

@@ -1,0 +1,32 @@
+[package]
+name = "omalive-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "omalive"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+omalive-core.workspace = true
+omalive-media.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+gpui-kit = { version = "=0.6.6", default-features = false, features = ["assets"] }
+gpui-omarchy = "=0.1.3"
+async-channel = "2"
+rfd = { version = "0.15", default-features = false, features = ["xdg-portal", "async-std"] }
+pipewire = "0.10"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+smallvec = "1"
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[dev-dependencies]
+tempfile = "3"
+gpui-kit = { version = "=0.6.6", default-features = false, features = ["assets", "test-support"] }

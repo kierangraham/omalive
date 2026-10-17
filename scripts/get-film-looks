@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""Add film-emulation looks to omalive's library.
+
+The looks come from RawTherapee's Film Simulation collection by Pat David,
+Pavlov Dmitry and Michael Ezra (CC BY-SA 4.0), shipped as Hald CLUT PNGs
+in one 400 MB zip. Only the chosen looks are fetched (by HTTP range
+requests), then `omalive import` converts each to a 33³ .cube.
+
+    scripts/get-film-looks          a curated set of about 20 looks
+    scripts/get-film-looks --all    all 290-odd looks (about 400 MB)
+    scripts/get-film-looks --list   list what the collection holds
+"""
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from remote_zip import RemoteFile  # noqa: E402
+
+URL = "https://rawtherapee.com/shared/HaldCLUT.zip"
+CREDITS = """Film looks from the RawTherapee Film Simulation collection
+by Pat David, Pavlov Dmitry and Michael Ezra, licensed CC BY-SA 4.0
+(https://creativecommons.org/licenses/by-sa/4.0/). Source:
+https://rawtherapee.com/shared/HaldCLUT.zip. omalive converted the Hald
+CLUT images to 33-point .cube files; the converted files are shared
+under the same licence. Film names are trademarks of their owners and
+the looks are approximations, not endorsed by them.
+"""
+
+# Member path inside the zip → name in the library. A curated set that
+# suits faces on video: natural film stocks first, a few creative looks,
+# and three black-and-white films.
+CURATED = {
+    "Color/Kodak/Kodak Portra 160 2.png": "Kodak_Portra_160",
+    "Color/Kodak/Kodak Portra 400 2.png": "Kodak_Portra_400",
+    "Color/Kodak/Kodak Portra 800 2.png": "Kodak_Portra_800",
+    "Color/Kodak/Kodak Ektar 100.png": "Kodak_Ektar_100",
+    "Color/Kodak/Kodak Kodachrome 64.png": "Kodak_Kodachrome_64",
+    "Color/Kodak/Kodak Ektachrome 100 VS.png": "Kodak_Ektachrome_100_VS",
+    "Color/Fuji/Fuji 400H 2.png": "Fuji_Pro_400H",
+    "Color/Fuji/Fuji Superia Reala 100.png": "Fuji_Superia_Reala_100",
+    "Color/Fuji/Fuji Provia 100F.png": "Fuji_Provia_100F",
+    "Color/Fuji/Fuji Velvia 100 Generic.png": "Fuji_Velvia_100",
+    "Color/Agfa/Agfa Vista 200.png": "Agfa_Vista_200",
+    "Color/Polaroid/Polaroid 669 3.png": "Polaroid_669",
+    "Color/CreativePack-1/SoftWarming.png": "Soft_warming",
+    "Color/CreativePack-1/CrispWarm.png": "Crisp_warm",
+    "Color/CreativePack-1/CrispWinter.png": "Crisp_winter",
+    "Color/CreativePack-1/CandleLight.png": "Candle_light",
+    "Color/CreativePack-1/LateSunset.png": "Late_sunset",
+    "Black-and-White/Ilford/Ilford HP5 Plus 400.png": "Ilford_HP5_Plus_400",
+    "Black-and-White/Kodak/Kodak TRI-X 400 2.png": "Kodak_Tri-X_400",
+    "Black-and-White/Fuji/Fuji Neopan Acros 100.png": "Fuji_Neopan_Acros_100",
+}
+
+
+def library():
+    config = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    return Path(config) / "omalive" / "luts"
+
+
+def main():
+    args = sys.argv[1:]
+    print("Reading the collection's index…", flush=True)
+    archive = zipfile.ZipFile(RemoteFile(URL))
+    members = {
+        info.filename.removeprefix("HaldCLUT/"): info
+        for info in archive.infolist()
+        if info.filename.endswith(".png")
+        and ("/Color/" in info.filename or "/Black-and-White/" in info.filename)
+    }
+    if "--list" in args:
+        for name in sorted(members):
+            print(name)
+        return
+    if "--all" in args:
+        wanted = {name: Path(name).stem.replace(" ", "_") for name in members}
+    else:
+        wanted = {name: target for name, target in CURATED.items() if name in members}
+        missing = sorted(set(CURATED) - set(members))
+        if missing:
+            print("Not in this version of the collection:", ", ".join(missing))
+    omalive = (
+        os.environ.get("OMALIVE_BIN")
+        or shutil.which("omalive")
+        or os.path.expanduser("~/.local/bin/omalive")
+    )
+    total = sum(members[name].compress_size for name in wanted) / 2**20
+    print(f"Fetching {len(wanted)} looks ({total:.0f} MB)…", flush=True)
+    with tempfile.TemporaryDirectory() as scratch:
+        files = []
+        for i, (name, target) in enumerate(sorted(wanted.items()), 1):
+            print(f"  {i}/{len(wanted)} {target.replace('_', ' ')}", flush=True)
+            path = Path(scratch) / f"{target}.png"
+            path.write_bytes(archive.read(members[name]))
+            files.append(str(path))
+        result = subprocess.run([omalive, "import", *files])
+    dest = library()
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "FILM-LOOKS-CREDITS.txt").write_text(CREDITS)
+    if result.returncode == 0:
+        print(f"Added {len(wanted)} film looks to {dest}. They appear under Looks on omalive's Camera page.")
+    sys.exit(result.returncode)
+
+
+if __name__ == "__main__":
+    main()
