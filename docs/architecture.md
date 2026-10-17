@@ -5,7 +5,7 @@ forbids unsafe code; `pipewire`, `v4l` and `wgpu` encapsulate the FFI.
 
 | Crate | Owns | Tested by |
 | --- | --- | --- |
-| `omalive-core` | Settings and validation (with migration from the Python version), voice presets, the filter-chain description, live-control names, the EQ response, the colour grade and its lattice bake, `.cube` parsing and the LUT library, Y'CbCr matrices, and a plain model of the PipeWire graph. No threads and no devices. | Unit tests |
+| `omalive-core` | Settings and validation, voice presets, the filter-chain description, live-control names, the EQ response, the colour grade and its lattice bake, `.cube` parsing and the LUT library, Y'CbCr matrices, and a plain model of the PipeWire graph. No threads and no devices. | Unit tests |
 | `omalive-media` | The PipeWire thread and the camera thread. | Unit tests for every pure part; `examples/probe.rs` and `examples/consume.rs` against the live session |
 | `omalive-app` | GPUI views, a GPUI-free view-model, and the engine adapters. | Model unit tests and GPUI interaction tests with a recording engine |
 
@@ -122,7 +122,7 @@ BT.601 limited range for outputs, which is what webcam consumers expect.
 
 ## The UI
 
-Omarchy Quattro's panel language on GPUI Kit and `gpui-omarchy`, drawn by
+Omarchy's panel style on GPUI Kit and `gpui-omarchy`, drawn by
 `ui/kit.rs`: ruled sections with letter-spaced uppercase headings, square
 switches, thin round sliders, bordered choices and neutral list selection,
 with btop-style dot graphs.

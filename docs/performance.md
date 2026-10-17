@@ -20,6 +20,9 @@ samples through omalive. Reimplementing it in Rust would gain nothing.
 | Without RNNoise, 256 quantum | 37.5 µs per 5.3 ms ≈ 0.7% |
 | No call app listening, meter hidden | Chain and microphone **suspended**, 0% |
 
+The chain measured here had three EQ bands. The fourth band adds one more
+biquad; together the biquads cost about 1 µs per cycle.
+
 Decisions:
 
 - **Quantum follows the effects.** RNNoise works on 480-sample (10 ms)
@@ -35,8 +38,9 @@ Decisions:
 - **Slider changes are live.** `Props` params are set on the running chain
   instead of restarting it. Only structural changes (input, RNNoise on/off,
   compressor on/off) restart it, and only when the user presses Apply.
-- **Event-driven graph.** Registry events replace the previous `pw-dump`
-  subprocess every 2 s and the 12.5 Hz full-state JSON stream to the UI.
+- **Event-driven graph.** PipeWire registry events keep omalive's model of
+  the graph current, so nothing polls `pw-dump` or streams the full state to
+  the UI.
 
 Considered and rejected:
 
