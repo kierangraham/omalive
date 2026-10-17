@@ -1,5 +1,10 @@
 PREFIX ?= $(HOME)/.local
+# Packagers stage into DESTDIR, e.g. make install DESTDIR="$pkgdir" PREFIX=/usr
+DESTDIR ?=
 TARGET_DIR ?= target
+BINDIR = $(DESTDIR)$(PREFIX)/bin
+APPDIR = $(DESTDIR)$(PREFIX)/share/applications
+ICONDIR = $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps
 
 .PHONY: run demo build check test shell-test lint probe promo film-looks install plugin uninstall clean
 run:
@@ -41,19 +46,23 @@ probe:
 # The app: binary, desktop entry and icon. The bar widget is a separate
 # step: `omarchy plugin add https://github.com/kierangraham/omalive --enable`.
 install: build
-	install -Dm755 "$(TARGET_DIR)/release/omalive" "$(PREFIX)/bin/omalive"
-	install -Dm644 packaging/omalive.desktop "$(PREFIX)/share/applications/omalive.desktop"
-	install -Dm644 assets/omalive.svg "$(PREFIX)/share/icons/hicolor/scalable/apps/omalive.svg"
-	@command -v update-desktop-database >/dev/null && update-desktop-database "$(PREFIX)/share/applications" || true
+	install -Dm755 "$(TARGET_DIR)/release/omalive" "$(BINDIR)/omalive"
+	install -Dm644 packaging/omalive.desktop "$(APPDIR)/omalive.desktop"
+	install -Dm644 assets/omalive.svg "$(ICONDIR)/omalive.svg"
+	@if [ -z "$(DESTDIR)" ] && command -v update-desktop-database >/dev/null; then update-desktop-database "$(APPDIR)" || true; fi
 # Development: copy this checkout's bar widget into the Omarchy shell instead
 # of a git clone.
 plugin:
-	OMALIVE_BIN="$(PREFIX)/bin/omalive" shell/install
+	OMALIVE_BIN="$(BINDIR)/omalive" shell/install
+# Removes what `make install` put in PREFIX. Without DESTDIR it also removes
+# the login autostart entry and a widget copied by `make plugin`.
 uninstall:
-	rm -f "$(PREFIX)/bin/omalive" "$(PREFIX)/share/applications/omalive.desktop" "$(PREFIX)/share/icons/hicolor/scalable/apps/omalive.svg"
-	rm -f "$${XDG_CONFIG_HOME:-$$HOME/.config}/autostart/omalive.desktop"
-	@dir="$${XDG_CONFIG_HOME:-$$HOME/.config}/omarchy/plugins/kierangraham.omalive"; \
+	rm -f "$(BINDIR)/omalive" "$(APPDIR)/omalive.desktop" "$(ICONDIR)/omalive.svg"
+	@if [ -z "$(DESTDIR)" ]; then \
+	  rm -f "$${XDG_CONFIG_HOME:-$$HOME/.config}/autostart/omalive.desktop"; \
+	  dir="$${XDG_CONFIG_HOME:-$$HOME/.config}/omarchy/plugins/kierangraham.omalive"; \
 	  if [ -f "$$dir/.omalive-managed" ]; then omarchy plugin disable kierangraham.omalive || true; rm -rf -- "$$dir"; \
-	  elif [ -d "$$dir" ]; then echo "Remove the bar widget with: omarchy plugin remove kierangraham.omalive"; fi
+	  elif [ -d "$$dir" ]; then echo "Remove the bar widget with: omarchy plugin remove kierangraham.omalive"; fi; \
+	fi
 clean:
 	cargo clean --target-dir "$(TARGET_DIR)"

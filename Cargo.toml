@@ -7,6 +7,13 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.97"
 license = "MIT"
+authors = ["Kieran Graham <me@kierangraham.com>"]
+repository = "https://github.com/kierangraham/omalive"
+homepage = "https://kierangraham.com"
+readme = "README.md"
+keywords = ["omarchy", "pipewire", "webcam", "microphone", "hyprland"]
+categories = ["multimedia::audio", "multimedia::video", "gui"]
+publish = false
 
 [workspace.dependencies]
 anyhow = "1"

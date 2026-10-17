@@ -6,3 +6,7 @@ artifacts/
 shell/tests/output/
 # Third-party LUTs and presets kept locally; not licensed for redistribution.
 look-library/
+# makepkg output under packaging/arch.
+packaging/arch/src/
+packaging/arch/pkg/
+packaging/arch/*.tar.*

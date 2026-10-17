@@ -20,7 +20,13 @@ Item {
   // Open panels that show the picture; the app only sends it while > 0.
   property int watchers: 0
   property string error: ""
-  readonly property string binary: Quickshell.env("OMALIVE_BIN") || Quickshell.env("HOME") + "/.local/bin/omalive"
+  // The omalive binary, found once by `locate`: OMALIVE_BIN wins, then
+  // `make install`'s location, Cargo's bin directory, the Arch package's
+  // /usr/bin and PATH.
+  property string binary: ""
+  readonly property string locate: 'for c in "$OMALIVE_BIN" "$HOME/.local/bin/omalive" "${CARGO_HOME:-$HOME/.cargo}/bin/omalive" /usr/bin/omalive; do'
+    + ' [ -n "$c" ] && [ -x "$c" ] && { echo "$c"; exit 0; }; done;'
+    + ' command -v omalive || exit 127'
   readonly property bool micOnAir: online && Model.micOnAir(status)
   readonly property bool cameraOnAir: online && status.camera === "live"
   readonly property bool micFlowing: online && status.voice === "live"
@@ -70,18 +76,39 @@ Item {
   }
   function openWindow() {
     if (online) send({cmd: "open"})
-    else Util.execArgv(["setsid", "uwsm-app", "--", root.binary])
+    else if (root.binary) Util.execArgv(["setsid", "uwsm-app", "--", root.binary])
   }
   // Start omalive without a window; the bar fills in as it comes up.
   function launch() {
-    Util.execArgv(["setsid", "uwsm-app", "--", root.binary, "--background"])
+    if (root.binary) Util.execArgv(["setsid", "uwsm-app", "--", root.binary, "--background"])
   }
 
-  Timer { id: retry; interval: 5000; onTriggered: bridge.running = true }
+  Timer {
+    id: retry
+    interval: 5000
+    onTriggered: {
+      if (root.binary) bridge.running = true
+      else locator.running = true
+    }
+  }
+  Process {
+    id: locator
+    command: ["sh", "-c", root.locate]
+    running: true
+    stdout: SplitParser { onRead: function(data) { root.binary = String(data).trim() } }
+    onExited: function(code, status) {
+      if (root.binary) {
+        bridge.running = true
+      } else {
+        root.error = "omalive is not installed. Install it as described in the omalive README."
+        retry.restart()
+      }
+    }
+  }
   Process {
     id: bridge
     command: [root.binary, "status", "--follow"]
-    running: true
+    running: false
     stdinEnabled: true
     stdout: SplitParser { onRead: function(data) { root.ingest(data) } }
     stderr: SplitParser { onRead: function(data) { root.error = String(data).slice(0, 240) } }

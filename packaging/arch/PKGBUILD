@@ -1,0 +1,65 @@
+# Maintainer: Kieran Graham <me@kierangraham.com>
+#
+# Installs the omalive app only. Omarchy manages the bar widget's folder
+# itself; add it with:
+#   omarchy plugin add https://github.com/kierangraham/omalive --enable
+
+pkgname=omalive
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Voice and camera processing for calls on Omarchy'
+arch=('x86_64' 'aarch64')
+url='https://github.com/kierangraham/omalive'
+license=('MIT')
+depends=(
+  'gcc-libs'
+  'glibc'
+  'libjpeg-turbo'
+  'libpipewire'
+  'libxcb'
+  'libxkbcommon'
+  'libxkbcommon-x11'
+  'pipewire'
+  'util-linux'
+  'vulkan-icd-loader'
+  'wayland'
+)
+makedepends=('cargo' 'clang' 'cmake' 'pkgconf')
+optdepends=(
+  'noise-suppression-for-voice: RNNoise noise suppression'
+  'swh-plugins: SC4 compressor'
+  'pipewire-audio: play back voice tests (pw-play)'
+  'libnotify: desktop notifications'
+  'xdg-desktop-portal: file picker for importing looks'
+  'v4l2loopback-dkms: a V4L2 camera for apps that do not use PipeWire'
+)
+source=("$pkgname-$pkgver.tar.gz::https://github.com/kierangraham/omalive/archive/refs/tags/v$pkgver.tar.gz")
+# Update after the v0.1.0 tag is published: run updpkgsums.
+sha256sums=('SKIP')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo build --frozen --release -p omalive-app
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo test --frozen --workspace
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  make install DESTDIR="$pkgdir" PREFIX=/usr
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
