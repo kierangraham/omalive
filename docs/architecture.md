@@ -79,6 +79,13 @@ socket.
 **Camera** (`media::camera`). A `Source` (V4L2 or a synthetic pattern) and
 a `Pipeline`:
 
+- `watch` follows `/dev` with inotify. When `video*` nodes come, go or
+  change permissions, it waits 500 ms for the burst to settle, lists the
+  cameras again and emits `Event::Cameras` if the list changed.
+  `Model::set_cameras` moves a switched-on camera with the list: onto
+  another camera when the one in use leaves, back to the chosen camera
+  when it returns, and out of a failure when a camera appears.
+
 - For each size the V4L2 source picks the format and rate nearest 30 fps
   without going over, preferring raw NV12 or YUYV to MJPEG at equal rates.
   Capture cards and many USB cameras only reach full rate in MJPEG; those

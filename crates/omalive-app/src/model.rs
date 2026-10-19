@@ -65,6 +65,10 @@ pub struct Model {
     /// What the running chain was started or last updated with.
     active_voice: Option<VoiceSettings>,
     pub cameras: Vec<CameraDevice>,
+    /// The camera is switched on, even if it failed or none is plugged in.
+    camera_wanted: bool,
+    /// The camera it last started on, until that camera is unplugged.
+    camera_source: Option<CameraDevice>,
     pub loopback: Option<String>,
     pub camera: CameraState,
     /// Capturing (false during on-demand standby).
@@ -94,6 +98,8 @@ impl Model {
             listeners: 0,
             active_voice: None,
             cameras: Vec::new(),
+            camera_wanted: false,
+            camera_source: None,
             loopback: None,
             camera: CameraState::Off,
             camera_active: false,
@@ -167,6 +173,7 @@ impl Model {
             Event::CameraViewers(viewers) => self.viewers = viewers,
             Event::VoiceListeners(listeners) => self.listeners = listeners,
             Event::CameraStats(stats) => self.stats = Some(stats),
+            Event::Cameras(cameras) => self.cameras = cameras,
             Event::Preview => {}
             Event::Error(text) => self.say(text, Tone::Bad),
             Event::Warning(text) => self.say(text, Tone::Warning),
@@ -382,8 +389,11 @@ impl Model {
 
     pub fn toggle_camera(&mut self, demo: bool) -> Vec<Effect> {
         if self.camera_running() {
+            self.camera_wanted = false;
             return vec![Effect::StopCamera];
         }
+        self.camera_wanted = true;
+        self.camera_source = None;
         let source = if demo {
             SourceSpec::Synthetic {
                 width: 1280,
@@ -392,8 +402,11 @@ impl Model {
                 picture: self.demo_picture.clone(),
             }
         } else {
-            match (self.selected_camera(), self.camera_size()) {
-                (Some(camera), Some(size)) => SourceSpec::Device(camera.clone(), size),
+            match (self.selected_camera().cloned(), self.camera_size()) {
+                (Some(camera), Some(size)) => {
+                    self.camera_source = Some(camera.clone());
+                    SourceSpec::Device(camera, size)
+                }
                 _ => {
                     self.say(
                         "No camera with a supported format was found.",
@@ -488,6 +501,33 @@ impl Model {
         if self.camera_running() {
             effects.insert(0, Effect::OnDemand(on));
         }
+        effects
+    }
+
+    /// Cameras come and go with docks and capture cards. A camera that is
+    /// switched on follows them: back to the chosen camera when it returns,
+    /// onto another when the one in use leaves, and out of a failure when
+    /// a camera appears.
+    pub fn set_cameras(&mut self, cameras: Vec<CameraDevice>, demo: bool) -> Vec<Effect> {
+        self.cameras = cameras;
+        // Once unplugged its open device is dead, even if it comes back
+        // looking the same.
+        if (self.camera_source.as_ref()).is_some_and(|source| !self.cameras.contains(source)) {
+            self.camera_source = None;
+        }
+        let failed = matches!(self.camera, CameraState::Failed(_));
+        let Some(camera) = self.selected_camera() else {
+            return Vec::new();
+        };
+        if demo || !self.camera_wanted || (self.camera_source.as_ref() == Some(camera) && !failed) {
+            return Vec::new();
+        }
+        let mut effects = Vec::new();
+        if self.camera_running() {
+            effects.push(Effect::StopCamera);
+            self.camera = CameraState::Off;
+        }
+        effects.extend(self.toggle_camera(demo));
         effects
     }
 
@@ -839,6 +879,65 @@ mod tests {
         model.settings.camera.width = 1920;
         model.settings.camera.height = 1080;
         assert_eq!(model.camera_size(), Some((1920, 1080)));
+    }
+
+    #[test]
+    fn a_switched_on_camera_follows_plugging_and_unplugging() {
+        let device = |id: &str, path: &str| CameraDevice {
+            id: id.into(),
+            path: path.into(),
+            name: id.into(),
+            sizes: vec![(1280, 720)],
+        };
+        let started_on = |effects: &[Effect]| match effects {
+            [
+                ..,
+                Effect::StartCamera {
+                    source: SourceSpec::Device(camera, _),
+                    ..
+                },
+            ] => camera.id.clone(),
+            other => panic!("{other:?}"),
+        };
+        let (isp, card) = (
+            device("isp", "/dev/video0"),
+            device("usb-2.2", "/dev/video1"),
+        );
+        let mut model = model();
+        assert!(model.set_cameras(vec![isp.clone()], false).is_empty());
+        assert_eq!(model.cameras, std::slice::from_ref(&isp));
+
+        // The capture card is chosen but unplugged, so the built-in runs.
+        model.settings.camera.device = card.id.clone();
+        assert_eq!(started_on(&model.toggle_camera(false)), "isp");
+        let both = vec![isp.clone(), card.clone()];
+        let effects = model.set_cameras(both.clone(), false);
+        assert!(matches!(effects[0], Effect::StopCamera));
+        assert_eq!(started_on(&effects), "usb-2.2");
+        assert!(model.set_cameras(both.clone(), false).is_empty());
+
+        // The dock drops it: back to the built-in, then to the card again.
+        assert_eq!(
+            started_on(&model.set_cameras(vec![isp.clone()], false)),
+            "isp"
+        );
+        assert_eq!(started_on(&model.set_cameras(both, false)), "usb-2.2");
+
+        // With no other camera it fails, and restarts when the card returns.
+        assert!(model.set_cameras(Vec::new(), false).is_empty());
+        model.event(Event::Camera(CameraState::Failed("No such device".into())));
+        let effects = model.set_cameras(vec![card.clone()], false);
+        assert!(!matches!(effects[0], Effect::StopCamera));
+        assert_eq!(started_on(&effects), "usb-2.2");
+
+        // Switched off, plugging changes only the list.
+        assert!(matches!(
+            model.toggle_camera(false)[..],
+            [Effect::StopCamera]
+        ));
+        model.event(Event::Camera(CameraState::Off));
+        assert!(model.set_cameras(vec![isp], false).is_empty());
+        assert!(model.set_cameras(vec![card], false).is_empty());
     }
 
     #[test]

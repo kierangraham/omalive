@@ -431,6 +431,11 @@ impl Omalive {
     }
 
     pub(crate) fn event(&mut self, event: Event, cx: &mut Context<Self>) {
+        if let Event::Cameras(cameras) = event {
+            let effects = self.model.set_cameras(cameras, self.demo);
+            self.run(effects, cx);
+            return;
+        }
         let preview = matches!(event, Event::Preview);
         match &event {
             // A fresh camera thread needs the preview size again.

@@ -4,6 +4,14 @@ All notable changes to omalive are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Cameras and capture cards plugged in after omalive starts now appear in
+  the camera list. A switched-on camera moves to the chosen camera when it
+  is plugged back in, for example after a dock reconnects.
+
 ## [0.1.0] - 2026-10-17
 
 ### Added

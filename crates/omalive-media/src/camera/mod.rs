@@ -8,6 +8,7 @@ pub mod pipeline;
 pub mod synthetic;
 pub mod thumb;
 pub mod v4l2;
+mod watch;
 
 use crate::{
     CameraState, Emit, Event,
@@ -24,6 +25,7 @@ use std::{
 };
 
 pub use v4l2::{CameraDevice, devices, loopback};
+pub use watch::watch;
 
 /// How long capture keeps running after the last consumer leaves, so a
 /// call app renegotiating does not flicker the camera light.

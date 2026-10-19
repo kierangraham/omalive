@@ -63,6 +63,8 @@ pub enum Event {
     Inputs(Vec<Input>),
     Voice(VoiceState),
     Camera(CameraState),
+    /// The cameras present, at start and after each plug or unplug.
+    Cameras(Vec<camera::CameraDevice>),
     CameraStats(Stats),
     /// Whether a PipeWire consumer is streaming the camera.
     CameraViewers(bool),
@@ -95,6 +97,7 @@ impl Media {
         let video = Arc::new(frames::Slot::default());
         let pipewire =
             pw::PipeWire::start(emit.clone(), meter.clone(), taps.clone(), video.clone());
+        camera::watch(emit.clone());
         Self {
             pipewire,
             camera: None,

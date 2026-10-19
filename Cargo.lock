@@ -4848,6 +4848,7 @@ dependencies = [
  "pipewire",
  "pollster 0.4.0",
  "rustix 1.1.5",
+ "tempfile",
  "turbojpeg",
  "v4l",
  "wgpu",
